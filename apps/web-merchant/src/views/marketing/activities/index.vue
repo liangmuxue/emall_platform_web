@@ -583,8 +583,8 @@ onMounted(load);
 .state.REJECTED { border-color: hsl(var(--destructive) / 45%); background: hsl(var(--destructive) / 12%); color: hsl(var(--destructive)); }
 .state.REJECTED i { box-shadow: 0 0 0 3px hsl(var(--destructive) / 20%); }
 .state-note { max-width: 12em; margin: 0; color: hsl(var(--destructive)); font-size: 12px; line-height: 1.4; }
-.sheet { display: flex; flex-direction: column; }
-.hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px 56px 18px 22px; }
+.sheet { display: flex; max-height: calc(100vh - 48px); flex-direction: column; }
+.hero { display: flex; flex: none; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px 56px 18px 22px; }
 .hero.cut { background: linear-gradient(145deg, hsl(var(--primary) / 28%), hsl(var(--card)) 68%); }
 .hero.coupon { background: linear-gradient(145deg, hsl(var(--warning) / 26%), hsl(var(--card)) 68%); }
 .hero.off { background: linear-gradient(145deg, hsl(var(--success) / 24%), hsl(var(--card)) 68%); }
@@ -593,7 +593,8 @@ onMounted(load);
 .hero b { display: block; margin-top: 4px; color: hsl(var(--foreground)); font-size: 20px; letter-spacing: -0.02em; }
 .hero p { margin: 6px 0 0; }
 .hero em { flex: none; margin-top: 4px; padding: 4px 10px; border-radius: 999px; background: hsl(var(--card) / 80%); color: hsl(var(--foreground)); font-style: normal; font-size: 12px; font-weight: 650; }
-.sheet-body { display: flex; max-height: min(68vh, 640px); flex-direction: column; gap: 14px; overflow: auto; padding: 16px 22px 8px; }
+.sheet-body { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; gap: 14px; overflow: auto; padding: 16px 22px 8px; }
+.sheet-body > * { flex: none; }
 .type-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .type { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); text-align: left; cursor: pointer; }
 .type i { display: grid; width: 36px; height: 36px; flex: none; place-items: center; border-radius: 12px; background: hsl(var(--accent)); color: hsl(var(--foreground)); font-style: normal; font-weight: 750; }
@@ -608,7 +609,7 @@ onMounted(load);
 .type.off.on i { background: hsl(var(--success)); color: hsl(var(--success-foreground, var(--card))); }
 .type.flash.on { border-color: hsl(var(--destructive) / 65%); background: linear-gradient(145deg, hsl(var(--destructive) / 16%), hsl(var(--card)) 70%); box-shadow: 0 0 0 3px hsl(var(--destructive) / 14%); }
 .type.flash.on i { background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground, var(--card))); }
-.block { overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 14px; background: linear-gradient(180deg, hsl(var(--primary) / 10%), hsl(var(--card)) 48px); }
+.block { flex: none; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 14px; background: linear-gradient(180deg, hsl(var(--primary) / 10%), hsl(var(--card)) 48px); }
 .block.rule.coupon { background: linear-gradient(180deg, hsl(var(--warning) / 12%), hsl(var(--card)) 48px); }
 .block.rule.off { background: linear-gradient(180deg, hsl(var(--success) / 12%), hsl(var(--card)) 48px); }
 .block.rule.flash { background: linear-gradient(180deg, hsl(var(--destructive) / 12%), hsl(var(--card)) 48px); }
@@ -639,12 +640,16 @@ onMounted(load);
 .sku-copy { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
 .sku-copy b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sku-copy small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.sheet-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 22px; border-top: 1px solid hsl(var(--border)); background: hsl(var(--card)); }
+.sheet-foot { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 22px; border-top: 1px solid hsl(var(--border)); background: hsl(var(--card)); }
 .sheet-foot p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 12px; }
 .sheet-foot div { display: flex; gap: 8px; }
 </style>
 
 <style>
+.act-modal .ant-modal {
+  top: 24px;
+  padding-bottom: 0;
+}
 .act-modal .ant-modal-content {
   overflow: hidden;
   padding: 0;

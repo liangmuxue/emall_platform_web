@@ -19,6 +19,8 @@ import {
 
 import { requestClient } from '#/api/request';
 
+import ProductAssistant from './assistant.vue';
+
 type Category = {
   id: number;
   name: string;
@@ -376,6 +378,93 @@ async function loadProduct(id: string) {
   if (detailRef.value) detailRef.value.innerHTML = product.detail || '';
   if (servicesRef.value) servicesRef.value.innerHTML = product.services || '';
   syncEditors();
+}
+
+function flatCategories(nodes: CategoryNode[], result: { id: number; name: string }[] = []) {
+  nodes.forEach((node) => {
+    result.push({ id: node.value, name: node.fullLabel });
+    if (node.children?.length) flatCategories(node.children, result);
+  });
+  return result;
+}
+
+function assistantDraft() {
+  return {
+    productName: form.productName,
+    categoryId: form.categoryId ?? null,
+    categories: flatCategories(categories.value),
+    spuNo: form.spuNo,
+    fakeSold: form.fakeSold ?? null,
+    imageCount: form.imageUrls.length,
+    specImages: form.specImages,
+    specs: form.specs.map((spec) => ({
+      skuName: spec.skuName,
+      parentName: form.specs.find((item) => item.key === spec.parentKey)?.skuName || '',
+      unitName: spec.unitName,
+      salePrice: spec.salePrice ?? null,
+      marketPrice: spec.marketPrice ?? null,
+      memberPrice: spec.memberPrice ?? null,
+      stock: spec.stock ?? null,
+    })),
+    detail: (detailRef.value?.innerText || '').slice(0, 1500),
+    services: (servicesRef.value?.innerText || '').slice(0, 800),
+  };
+}
+
+function applyAssistant(product: Record<string, any>) {
+  if (product.productName) form.productName = String(product.productName).slice(0, 60);
+  if (product.categoryId) form.categoryId = Number(product.categoryId);
+  if (product.spuNo) form.spuNo = String(product.spuNo);
+  if (product.fakeSold != null) form.fakeSold = Number(product.fakeSold);
+  if (typeof product.specImages === 'boolean') form.specImages = product.specImages;
+  if (Array.isArray(product.imageUrls)) {
+    product.imageUrls.forEach((url: string) => {
+      if (form.imageUrls.length < 5 && url && !form.imageUrls.includes(url)) form.imageUrls.push(url);
+    });
+  }
+  if (Array.isArray(product.specs) && product.specs.length) {
+    const images = new Map(form.specs.map((spec) => [
+      `${form.specs.find((item) => item.key === spec.parentKey)?.skuName || ''}/${spec.skuName}`,
+      spec.imageUrl,
+    ]));
+    const keys = new Map<string, string>();
+    const next: Spec[] = [];
+    const fill = (row: Record<string, any>, parentKey: string, parentName: string) => {
+      const spec = blankSpec(parentKey, row.unitName || '份');
+      spec.skuName = String(row.skuName || '');
+      spec.imageUrl = images.get(`${parentName}/${spec.skuName}`) || '';
+      if (row.salePrice != null) spec.salePrice = Number(row.salePrice);
+      if (row.marketPrice != null) spec.marketPrice = Number(row.marketPrice);
+      if (row.memberPrice != null) spec.memberPrice = Number(row.memberPrice);
+      if (row.stock != null) spec.stock = Number(row.stock);
+      return spec;
+    };
+    product.specs.forEach((row: Record<string, any>) => {
+      if (row.parentName) return;
+      const spec = fill(row, '', '');
+      keys.set(spec.skuName, spec.key);
+      next.push(spec);
+    });
+    product.specs.forEach((row: Record<string, any>) => {
+      const parentName = String(row.parentName || '');
+      if (!parentName) return;
+      next.push(fill(row, keys.get(parentName) || '', parentName));
+    });
+    next.forEach((spec) => {
+      if (next.some((item) => item.parentKey === spec.key)) {
+        spec.unitName = '';
+        spec.salePrice = undefined;
+        spec.marketPrice = undefined;
+        spec.memberPrice = undefined;
+        spec.stock = undefined;
+      }
+    });
+    form.specs = next;
+  }
+  if (product.detail != null && detailRef.value) detailRef.value.innerHTML = String(product.detail);
+  if (product.services != null && servicesRef.value) servicesRef.value.innerHTML = String(product.services);
+  syncEditors();
+  reached.value = 2;
 }
 
 function payload() {
@@ -825,6 +914,7 @@ onMounted(async () => {
       </aside>
     </div>
     </div>
+    <ProductAssistant :get-draft="assistantDraft" @apply="applyAssistant" />
     <template #footer>
       <div class="footer">
         <span>{{
