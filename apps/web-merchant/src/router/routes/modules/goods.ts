@@ -34,6 +34,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/goods/edit/index.vue'),
         meta: {
           hideInMenu: true,
+          keepAlive: true,
           title: '编辑商品',
         },
       },
