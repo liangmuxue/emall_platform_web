@@ -128,7 +128,7 @@ onMounted(load);
           </Tag>
         </template>
         <template v-else-if="column.key === 'action'">
-          <Button size="small" type="link" @click="openEdit(record)">
+          <Button size="small" type="link" @click="openEdit(record as Account)">
             处理
           </Button>
         </template>

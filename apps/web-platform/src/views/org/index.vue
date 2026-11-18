@@ -225,7 +225,7 @@ onMounted(load);
           </Tag>
         </template>
         <template v-else-if="column.key === 'action'">
-          <Button size="small" type="link" @click="openPerm(record)">
+          <Button size="small" type="link" @click="openPerm(record as Role)">
             配置
           </Button>
         </template>
@@ -245,7 +245,7 @@ onMounted(load);
           </Tag>
         </template>
         <template v-else-if="column.key === 'action'">
-          <Button size="small" type="link" @click="openStaff(record)">
+          <Button size="small" type="link" @click="openStaff(record as Staff)">
             编辑
           </Button>
         </template>
