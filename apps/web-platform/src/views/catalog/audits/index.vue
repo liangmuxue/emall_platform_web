@@ -8,14 +8,11 @@ import { Page } from '@vben/common-ui';
 import {
   Button,
   Card,
-  Form,
-  FormItem,
   Image,
   Input,
   message,
   Modal,
   Radio,
-  Select,
   Spin,
   Table,
   Tag,
@@ -217,6 +214,16 @@ function statusText(item: Product | Record<string, any>) {
   return item.statusName;
 }
 
+function toneClass(item: Product | Record<string, any>) {
+  if (item.salesStatus === 'ON_SALE' && Number(item.stock) === 0)
+    return 'tone tone-off';
+  if (item.salesStatus === 'PENDING') return 'tone tone-pending';
+  if (item.salesStatus === 'ON_SALE') return 'tone tone-on';
+  if (item.salesStatus === 'REJECTED') return 'tone tone-bad';
+  if (item.salesStatus === 'OFF_SHELF') return 'tone tone-off';
+  return 'tone';
+}
+
 async function load() {
   loading.value = true;
   try {
@@ -231,6 +238,9 @@ async function load() {
 const sheetSpecs = computed(() => specRows(detail.value?.skus || []));
 const sheetImages = computed(
   () => detail.value?.imageUrls?.filter(Boolean) || [],
+);
+const coverUrl = computed(
+  () => sheetImages.value[0] || current.value?.coverUrl || '',
 );
 
 function openAudit(record: Product | Record<string, any>) {
@@ -490,266 +500,264 @@ onMounted(load);
       :footer="null"
       :open="open"
       :title="null"
-      width="920px"
+      width="860px"
       wrap-class-name="product-audit-modal"
       @cancel="open = false"
     >
       <div v-if="current" class="sheet">
         <header class="hero">
+          <img v-if="coverUrl" class="hero-cover" :src="coverUrl" alt="" />
+          <span v-else class="hero-cover cover-fallback">{{
+            (detail?.productName || current.productName).slice(0, 1)
+          }}</span>
           <div class="hero-copy">
-            <span>{{
-              current.salesStatus === 'PENDING'
-                ? '审核商品'
-                : current.salesStatus === 'ON_SALE'
-                  ? '下架商品'
-                  : '商品详情'
-            }}</span>
-            <b>{{ detail?.productName || current.productName }}</b>
-            <p>
-              {{ current.shopName }} · {{ current.categoryName }} ·
-              {{ current.spuNo || '未填货号' }}
-            </p>
+            <div class="hero-title">
+              <b>{{ detail?.productName || current.productName }}</b>
+              <em :class="toneClass(detail || current)">{{
+                statusText(detail || current)
+              }}</em>
+            </div>
+            <div class="meta">
+              <span>{{ current.shopName }}</span>
+              <span>{{ current.categoryName }}</span>
+              <span>{{ current.spuNo || '未填货号' }}</span>
+              <span>{{
+                (current.createdAt || '').slice(0, 16) || '提交时间未记录'
+              }}</span>
+            </div>
           </div>
-          <em>{{ statusText(detail || current) }}</em>
         </header>
-        <Spin :spinning="detailLoading">
-          <div class="sheet-body">
-            <section class="block">
-              <header>
-                <b>商品资料</b>
-                <span>{{
-                  (current.createdAt || '').slice(0, 16) || '提交时间未记录'
-                }}</span>
-              </header>
-              <div class="block-body">
-                <Image.PreviewGroup v-if="sheetImages.length">
+        <div class="stat-row">
+          <div class="hot">
+            <b>{{
+              current.price === undefined || current.price === null
+                ? '—'
+                : `${current.priceFrom ? '起 ' : ''}${money(current.price)}`
+            }}</b>
+            <span>最低售价</span>
+          </div>
+          <div>
+            <b>{{ money(current.marketPrice) }}</b>
+            <span>划线价</span>
+          </div>
+          <div>
+            <b>{{ money(current.memberPrice) }}</b>
+            <span>会员价</span>
+          </div>
+          <div>
+            <b>{{ current.stock ?? 0 }}</b>
+            <span>总库存</span>
+          </div>
+          <div>
+            <b>{{ detail?.soldCount ?? 0 }}</b>
+            <span>真实已售</span>
+          </div>
+          <div>
+            <b>{{ detail?.fakeSold ?? 0 }}</b>
+            <span>基础已售</span>
+          </div>
+        </div>
+        <div class="sheet-spin">
+          <Spin :spinning="detailLoading">
+            <div class="sheet-body">
+              <section v-if="sheetImages.length > 1" class="panel-block">
+                <h3>商品图片</h3>
+                <Image.PreviewGroup>
                   <div class="gallery">
                     <Image v-for="url in sheetImages" :key="url" :src="url" />
                   </div>
                 </Image.PreviewGroup>
-                <p v-else class="empty">商家还没有上传商品图片</p>
-                <div class="facts">
-                  <div>
-                    <span>最低售价</span>
-                    <b>{{
-                      current.price === undefined || current.price === null
-                        ? '—'
-                        : `${current.priceFrom ? '起 ' : ''}${money(current.price)}`
-                    }}</b>
-                  </div>
-                  <div>
-                    <span>划线价</span>
-                    <b>{{ money(current.marketPrice) }}</b>
-                  </div>
-                  <div>
-                    <span>会员价</span>
-                    <b>{{ money(current.memberPrice) }}</b>
-                  </div>
-                  <div>
-                    <span>总库存</span>
-                    <b>{{ current.stock ?? 0 }}</b>
-                  </div>
-                  <div>
-                    <span>真实已售</span>
-                    <b>{{ detail?.soldCount ?? 0 }}</b>
-                  </div>
-                  <div>
-                    <span>基础已售</span>
-                    <b>{{ detail?.fakeSold ?? 0 }}</b>
-                  </div>
-                </div>
-              </div>
-            </section>
-            <section class="block">
-              <header>
-                <b>规格价格</b>
-                <span>分组规格不单独标价，最低价会标出来</span>
-              </header>
-              <div class="block-body">
+              </section>
+              <section class="panel-block">
+                <h3>规格价格</h3>
                 <p v-if="!sheetSpecs.length" class="empty">还没有规格</p>
-                <template v-for="row in sheetSpecs" :key="row.key">
-                  <div
-                    v-if="row.group"
-                    class="group-line"
-                    :style="{ marginLeft: `${row.depth * 18}px` }"
-                  >
-                    <i></i>
-                    <b>{{ row.skuName }}</b>
-                    <em>分组</em>
-                  </div>
-                  <article
-                    v-else
-                    class="leaf"
-                    :class="{ lead: row.lead }"
-                    :style="{ marginLeft: `${row.depth * 18}px` }"
-                  >
-                    <img
-                      v-if="row.imageUrl"
-                      class="sku-image"
-                      :src="row.imageUrl"
-                      alt=""
-                    />
-                    <div class="leaf-name">
-                      <b>{{ row.skuName }}</b>
-                      <em>{{ row.unitName || '份' }}</em>
-                      <span v-if="row.lead" class="badge">最低</span>
-                    </div>
-                    <dl class="figures">
-                      <div>
-                        <dt>售价</dt>
-                        <dd>{{ money(row.salePrice) }}</dd>
-                      </div>
-                      <div>
-                        <dt>划线价</dt>
-                        <dd :class="{ strike: row.marketPrice }">
-                          {{ money(row.marketPrice) }}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>会员价</dt>
-                        <dd class="member">{{ money(row.memberPrice) }}</dd>
-                      </div>
-                      <div>
-                        <dt>库存</dt>
-                        <dd>
-                          {{
-                            row.stock === undefined || row.stock === null
-                              ? '—'
-                              : row.stock
-                          }}
-                        </dd>
-                      </div>
-                    </dl>
-                  </article>
-                </template>
-              </div>
-            </section>
-            <section class="block">
-              <header>
-                <b>图文详情</b>
-                <span>顾客在商品介绍里看到的内容</span>
-              </header>
-              <div class="block-body">
+                <div v-else class="spec-card">
+                  <table class="spec-table">
+                    <thead>
+                      <tr>
+                        <th>规格</th>
+                        <th>单位</th>
+                        <th>售价</th>
+                        <th>划线价</th>
+                        <th>会员价</th>
+                        <th>库存</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="row in sheetSpecs"
+                        :key="row.key"
+                        :class="{ group: row.group, lead: row.lead }"
+                      >
+                        <td v-if="row.group" class="spec-name" colspan="6">
+                          {{ row.skuName }}
+                        </td>
+                        <template v-else>
+                          <td
+                            class="spec-name"
+                            :style="{
+                              paddingLeft: `${14 + row.depth * 16}px`,
+                            }"
+                          >
+                            <img
+                              v-if="row.imageUrl"
+                              :src="row.imageUrl"
+                              alt=""
+                            />
+                            <span>{{ row.skuName }}</span>
+                            <i v-if="row.lead">最低</i>
+                          </td>
+                          <td>{{ row.unitName || '份' }}</td>
+                          <td class="price">{{ money(row.salePrice) }}</td>
+                          <td :class="{ muted: row.marketPrice }">
+                            {{ money(row.marketPrice) }}
+                          </td>
+                          <td>{{ money(row.memberPrice) }}</td>
+                          <td>
+                            {{
+                              row.stock === undefined || row.stock === null
+                                ? '—'
+                                : row.stock
+                            }}
+                          </td>
+                        </template>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <section class="panel-block">
+                <h3>图文详情</h3>
                 <div
                   v-if="detail?.detail"
-                  class="rich"
+                  class="prose"
                   v-html="detail.detail"
                 ></div>
                 <p v-else class="empty">没有填写商品介绍</p>
-              </div>
-            </section>
-            <section class="block">
-              <header>
-                <b>服务承诺</b>
-                <span>所有规格共用</span>
-              </header>
-              <div class="block-body">
+              </section>
+              <section class="panel-block">
+                <h3>服务承诺</h3>
                 <div
                   v-if="detail?.services"
-                  class="rich"
+                  class="services"
                   v-html="detail.services"
                 ></div>
                 <p v-else class="empty">没有填写服务承诺</p>
-              </div>
-            </section>
-            <section
-              v-if="detail?.auditRemark || current.auditRemark"
-              class="block"
-            >
-              <header>
-                <b>上次审核说明</b>
-                <span>商家再次提交前会看到这段话</span>
-              </header>
-              <div class="block-body">
+              </section>
+              <section
+                v-if="detail?.auditRemark || current.auditRemark"
+                class="panel-block"
+              >
+                <h3>上次审核说明</h3>
                 <p class="note">
                   {{ detail?.auditRemark || current.auditRemark }}
                 </p>
-              </div>
-            </section>
-            <section
-              v-if="
-                current.salesStatus === 'PENDING' ||
-                current.salesStatus === 'ON_SALE'
-              "
-              class="block"
-            >
-              <header>
-                <b>{{
-                  current.salesStatus === 'ON_SALE' ? '下架原因' : '审核意见'
-                }}</b>
-                <span>{{
-                  current.salesStatus === 'PENDING'
-                    ? '驳回时必填'
-                    : '下架时必填'
-                }}</span>
-              </header>
-              <div class="block-body">
-                <Form layout="vertical">
-                  <FormItem
-                    v-if="current.salesStatus === 'PENDING'"
-                    label="结果"
-                  >
-                    <Select
-                      v-model:value="form.result"
-                      :options="[
-                        { label: '通过并上架', value: 'ON_SALE' },
-                        { label: '驳回', value: 'REJECTED' },
-                      ]"
-                    />
-                  </FormItem>
-                  <FormItem
-                    :label="current.salesStatus === 'ON_SALE' ? '原因' : '说明'"
-                  >
-                    <Input.TextArea
-                      v-model:value="form.remark"
-                      :maxlength="200"
-                      :rows="3"
-                      placeholder="通过可以留空。驳回或下架请写明原因，商家会看到这段说明。"
-                      show-count
-                    />
-                  </FormItem>
-                </Form>
-              </div>
-            </section>
-          </div>
-        </Spin>
-        <footer class="sheet-foot">
-          <p>
-            {{
-              current.salesStatus === 'PENDING'
-                ? '通过后顾客可以在分类里看到。驳回后商家可以修改并重新提交。'
-                : current.salesStatus === 'ON_SALE'
-                  ? '下架后顾客不能再购买这件商品。'
-                  : '这里只核对商品内容，状态不会改变。'
-            }}
-          </p>
-          <div>
-            <Button @click="open = false">
+              </section>
+            </div>
+          </Spin>
+        </div>
+        <footer
+          class="sheet-foot"
+          :class="{
+            quiet:
+              current.salesStatus !== 'PENDING' &&
+              current.salesStatus !== 'ON_SALE',
+          }"
+        >
+          <template v-if="current.salesStatus === 'PENDING'">
+            <div class="choices">
+              <button
+                class="choice pass"
+                :class="{ on: form.result === 'ON_SALE' }"
+                type="button"
+                @click="form.result = 'ON_SALE'"
+              >
+                <b>通过并上架</b>
+                <span>顾客可以在分类里看到</span>
+                <i></i>
+              </button>
+              <button
+                class="choice reject"
+                :class="{ on: form.result === 'REJECTED' }"
+                type="button"
+                @click="form.result = 'REJECTED'"
+              >
+                <b>驳回</b>
+                <span>商家修改后可以再提交</span>
+                <i></i>
+              </button>
+            </div>
+            <label class="remark">
+              <span>{{
+                form.result === 'REJECTED' ? '驳回原因' : '给商家的说明'
+              }}</span>
+              <Input.TextArea
+                v-model:value="form.remark"
+                :maxlength="200"
+                :rows="2"
+                :placeholder="
+                  form.result === 'REJECTED'
+                    ? '请写明驳回原因，商家会看到这段说明。'
+                    : '可以留空，也可以写一句给商家看的话。'
+                "
+              />
+            </label>
+          </template>
+          <template v-else-if="current.salesStatus === 'ON_SALE'">
+            <div class="off-banner">
+              <b>下架这件商品</b>
+              <span>下架后顾客不能再购买，原因会展示给商家。</span>
+            </div>
+            <label class="remark">
+              <span>下架原因</span>
+              <Input.TextArea
+                v-model:value="form.remark"
+                :maxlength="200"
+                :rows="2"
+                placeholder="请写明下架原因，商家会看到这段说明。"
+              />
+            </label>
+          </template>
+          <p v-else class="foot-note">这里只核对商品内容，状态不会改变。</p>
+          <div class="foot-bar">
+            <p v-if="current.salesStatus === 'PENDING'">
               {{
-                current.salesStatus === 'PENDING' ||
-                current.salesStatus === 'ON_SALE'
-                  ? '取消'
-                  : '关闭'
+                form.result === 'REJECTED'
+                  ? '驳回时原因必填。'
+                  : '通过后商品会立即上架。'
               }}
-            </Button>
-            <Button
-              v-if="
-                current.salesStatus === 'PENDING' ||
-                current.salesStatus === 'ON_SALE'
-              "
-              :danger="form.result !== 'ON_SALE'"
-              :loading="saving"
-              type="primary"
-              @click="submit"
-            >
-              {{
-                current.salesStatus === 'ON_SALE'
-                  ? '确认下架'
-                  : form.result === 'REJECTED'
-                    ? '驳回'
-                    : '审核通过'
-              }}
-            </Button>
+            </p>
+            <p v-else-if="current.salesStatus === 'ON_SALE'">
+              下架时原因必填。
+            </p>
+            <div class="foot-actions">
+              <Button @click="open = false">
+                {{
+                  current.salesStatus === 'PENDING' ||
+                  current.salesStatus === 'ON_SALE'
+                    ? '取消'
+                    : '关闭'
+                }}
+              </Button>
+              <Button
+                v-if="
+                  current.salesStatus === 'PENDING' ||
+                  current.salesStatus === 'ON_SALE'
+                "
+                :danger="form.result !== 'ON_SALE'"
+                :loading="saving"
+                type="primary"
+                @click="submit"
+              >
+                {{
+                  current.salesStatus === 'ON_SALE'
+                    ? '确认下架'
+                    : form.result === 'REJECTED'
+                      ? '确认驳回'
+                      : '确认通过'
+                }}
+              </Button>
+            </div>
           </div>
         </footer>
       </div>
@@ -1212,202 +1220,514 @@ onMounted(load);
 .sheet {
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 48px);
+  background:
+    radial-gradient(
+      520px 180px at 0% 0%,
+      hsl(var(--primary) / 16%),
+      transparent 70%
+    ),
+    hsl(var(--card));
+}
+
+.hero,
+.stat-row,
+.sheet-foot {
+  flex: none;
 }
 
 .hero {
   display: flex;
   gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 22px 56px 18px 22px;
-  background: linear-gradient(
-    145deg,
-    hsl(var(--primary) / 24%),
-    hsl(var(--card)) 68%
-  );
+  align-items: center;
+  padding: 22px 56px 8px 22px;
+}
+
+.hero-cover {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px hsl(0deg 0% 0% / 22%);
+}
+
+.cover-fallback {
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  font-weight: 650;
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 14%);
 }
 
 .hero-copy {
   min-width: 0;
 }
 
-.hero span,
-.hero p {
+.hero-title {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.hero b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 20px;
+  font-weight: 680;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.tone {
+  flex: none;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 650;
+  line-height: 20px;
+  border-radius: 999px;
+}
+
+.tone-pending {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 16%);
+}
+
+.tone-on {
+  color: hsl(144deg 57% 58%);
+  background: hsl(144deg 57% 58% / 16%);
+}
+
+.tone-off {
+  color: hsl(42deg 84% 61%);
+  background: hsl(42deg 84% 61% / 16%);
+}
+
+.tone-bad {
+  color: hsl(348deg 100% 68%);
+  background: hsl(348deg 100% 61% / 16%);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.meta span {
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--foreground) / 6%);
+  border-radius: 999px;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 16px 22px 0;
+  overflow: hidden;
+  background: hsl(var(--foreground) / 4%);
+  border: 1px solid hsl(var(--border));
+  border-radius: 16px;
+}
+
+.stat-row div {
+  min-width: 0;
+  padding: 12px 14px 11px;
+}
+
+.stat-row div + div {
+  border-left: 1px solid hsl(var(--border));
+}
+
+.stat-row b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stat-row span {
+  display: block;
+  margin-top: 3px;
   font-size: 12px;
   color: hsl(var(--muted-foreground));
 }
 
-.hero b {
-  display: block;
-  margin-top: 4px;
-  font-size: 20px;
-  color: hsl(var(--foreground));
-  letter-spacing: -0.02em;
+.stat-row .hot b {
+  color: hsl(var(--primary));
 }
 
-.hero p {
-  margin: 6px 0 0;
+.sheet-spin {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.hero em {
-  flex: none;
-  padding: 4px 10px;
-  margin-top: 4px;
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 650;
-  color: hsl(var(--foreground));
-  background: hsl(var(--card) / 80%);
-  border-radius: 999px;
+.sheet-spin :deep(.ant-spin-nested-loading),
+.sheet-spin :deep(.ant-spin-container) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .sheet-body {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  gap: 14px;
-  max-height: min(68vh, 680px);
-  padding: 16px 22px 8px;
+  gap: 18px;
+  min-height: 0;
+  padding: 18px 22px 20px;
   overflow: auto;
 }
 
-.block {
-  overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    hsl(var(--primary) / 10%),
-    hsl(var(--card)) 48px
-  );
-  border: 1px solid hsl(var(--border));
-  border-radius: 14px;
+.sheet-body > * {
+  flex: none;
 }
 
-.block > header {
+.panel-block h3 {
   display: flex;
-  gap: 12px;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 12px 14px 8px;
-}
-
-.block > header span {
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 10px;
   font-size: 12px;
+  font-weight: 650;
   color: hsl(var(--muted-foreground));
+  letter-spacing: 0.08em;
 }
 
-.block-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 4px 14px 14px;
+.panel-block h3::before {
+  width: 3px;
+  height: 12px;
+  content: '';
+  background: hsl(var(--primary));
+  border-radius: 3px;
 }
 
 .gallery {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .gallery :deep(.ant-image) {
   overflow: hidden;
-  border: 1px solid hsl(var(--border));
-  border-radius: 12px;
+  border-radius: 14px;
+  box-shadow: 0 8px 18px hsl(0deg 0% 0% / 16%);
 }
 
 .gallery :deep(.ant-image-img) {
-  width: 84px;
-  height: 84px;
+  width: 92px;
+  height: 92px;
   object-fit: cover;
 }
 
-.facts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.facts div {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  padding: 10px 12px;
-  background: hsl(var(--accent));
-  border-radius: 12px;
-}
-
-.facts span {
-  font-size: 12px;
-  color: hsl(var(--muted-foreground));
-}
-
-.facts b {
+.spec-card {
   overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 14px;
-  white-space: nowrap;
+  border: 1px solid hsl(var(--border));
+  border-radius: 16px;
 }
 
-.sku-image {
-  flex: none;
-  width: 44px;
-  height: 44px;
+.spec-table {
+  width: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.spec-table th {
+  padding: 11px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  text-align: right;
+  background: hsl(var(--foreground) / 4%);
+}
+
+.spec-table th:first-child {
+  text-align: left;
+}
+
+.spec-table td {
+  padding: 12px 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.spec-table td:nth-child(2) {
+  color: hsl(var(--muted-foreground));
+  text-align: center;
+}
+
+.spec-table .spec-name {
+  text-align: left;
+}
+
+.spec-table tr.group td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-weight: 650;
+  color: hsl(var(--foreground));
+  text-align: left;
+  background: hsl(var(--primary) / 10%);
+  border-top: 0;
+}
+
+.spec-table tr.group + tr td {
+  border-top: 0;
+}
+
+.spec-table tbody tr:not(.group):hover td {
+  background: hsl(var(--foreground) / 4%);
+}
+
+.spec-name img {
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  vertical-align: middle;
   object-fit: cover;
   border-radius: 8px;
 }
 
-.empty,
-.note {
-  margin: 0;
-  line-height: 1.6;
+.spec-name span {
+  vertical-align: middle;
+}
+
+.spec-name i {
+  padding: 0 7px;
+  margin-left: 8px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 650;
+  line-height: 18px;
+  vertical-align: middle;
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary));
+  border-radius: 999px;
+}
+
+.spec-table .price {
+  font-weight: 700;
+}
+
+.spec-table tr.lead .price {
+  color: hsl(var(--primary));
+}
+
+.spec-table .muted {
+  font-weight: 500;
   color: hsl(var(--muted-foreground));
+  text-decoration: line-through;
+}
+
+.empty {
+  padding: 18px;
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  text-align: center;
+  background: hsl(var(--foreground) / 4%);
+  border-radius: 14px;
 }
 
 .note {
-  color: hsl(var(--foreground));
-}
-
-.rich {
+  padding: 12px 14px;
+  margin: 0;
   line-height: 1.7;
+  background: hsl(42deg 84% 61% / 12%);
+  border-radius: 14px;
+}
+
+.prose {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 20px;
+  align-items: center;
+  padding: 14px 16px;
+  line-height: 1.75;
   color: hsl(var(--foreground));
+  background: hsl(var(--foreground) / 4%);
+  border-radius: 16px;
 }
 
-.rich :deep(img) {
-  max-width: 100%;
-  border-radius: 8px;
+.prose :deep(p) {
+  flex: 1 1 220px;
+  margin: 0;
 }
 
-.rich :deep(p) {
-  margin: 0 0 8px;
+.prose :deep(img) {
+  display: block;
+  flex: none;
+  width: auto;
+  max-width: min(100%, 280px);
+  height: auto;
+  max-height: 180px;
+  object-fit: contain;
+  background: hsl(var(--card));
+  border-radius: 14px;
+  box-shadow: 0 12px 28px hsl(0deg 0% 0% / 22%);
+}
+
+.services :deep(p),
+.services :deep(li) {
+  display: inline-flex;
+  padding: 7px 12px;
+  margin: 0 8px 8px 0;
+  line-height: 1.4;
+  background: hsl(var(--foreground) / 6%);
+  border-radius: 999px;
 }
 
 .sheet-foot {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 22px;
-  background: hsl(var(--card));
+  padding: 16px 22px 18px;
+  background: hsl(var(--foreground) / 3%);
   border-top: 1px solid hsl(var(--border));
 }
 
-.sheet-foot p {
-  margin: 0;
+.sheet-foot.quiet {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.choice {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  padding: 13px 40px 13px 14px;
+  color: hsl(var(--foreground));
+  text-align: left;
+  cursor: pointer;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+}
+
+.choice b {
+  font-size: 14px;
+  font-weight: 680;
+}
+
+.choice span {
   font-size: 12px;
+  line-height: 1.4;
   color: hsl(var(--muted-foreground));
 }
 
-.sheet-foot div {
+.choice i {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid hsl(var(--border));
+  border-radius: 50%;
+}
+
+.choice.pass.on {
+  color: hsl(var(--success));
+  background: hsl(var(--success) / 12%);
+  border-color: hsl(var(--success) / 70%);
+}
+
+.choice.reject.on {
+  color: hsl(var(--destructive));
+  background: hsl(var(--destructive) / 12%);
+  border-color: hsl(var(--destructive) / 70%);
+}
+
+.choice.on i {
+  background: currentcolor;
+  border-color: transparent;
+  box-shadow: inset 0 0 0 3px hsl(var(--card));
+}
+
+.off-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: hsl(var(--destructive) / 10%);
+  border: 1px solid hsl(var(--destructive) / 45%);
+  border-radius: 14px;
+}
+
+.off-banner b {
+  color: hsl(var(--destructive));
+}
+
+.off-banner span,
+.remark span,
+.foot-bar p,
+.foot-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: hsl(var(--muted-foreground));
+}
+
+.remark {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.remark :deep(textarea) {
+  border-radius: 12px;
+}
+
+.foot-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.foot-bar p,
+.foot-note {
+  margin: 0;
+}
+
+.foot-actions {
   display: flex;
   flex: none;
   gap: 8px;
+  margin-left: auto;
 }
 </style>
 
 <style>
+.product-audit-modal .ant-modal {
+  top: 24px;
+  padding-bottom: 0;
+}
+
 .product-audit-modal .ant-modal-content {
   padding: 0;
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 22px;
+  box-shadow: 0 28px 80px hsl(0deg 0% 0% / 42%);
 }
 
 .product-audit-modal .ant-modal-header {

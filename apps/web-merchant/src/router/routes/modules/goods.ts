@@ -3,6 +3,7 @@ import type { RouteRecordRaw } from 'vue-router';
 const routes: RouteRecordRaw[] = [
   {
     meta: {
+      authority: ['products', 'categories'],
       icon: 'lucide:package',
       order: 10,
       title: '商品',
@@ -15,6 +16,7 @@ const routes: RouteRecordRaw[] = [
         path: 'categories',
         component: () => import('#/views/goods/categories/index.vue'),
         meta: {
+          authority: ['categories'],
           icon: 'lucide:folder-tree',
           title: '平台类目',
         },
@@ -24,6 +26,7 @@ const routes: RouteRecordRaw[] = [
         path: 'products',
         component: () => import('#/views/goods/products/index.vue'),
         meta: {
+          authority: ['products'],
           icon: 'lucide:boxes',
           title: '商品与库存',
         },
@@ -33,6 +36,7 @@ const routes: RouteRecordRaw[] = [
         path: 'edit',
         component: () => import('#/views/goods/edit/index.vue'),
         meta: {
+          authority: ['products'],
           hideInMenu: true,
           keepAlive: true,
           title: '编辑商品',

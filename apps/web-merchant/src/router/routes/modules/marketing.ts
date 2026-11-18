@@ -3,6 +3,7 @@ import type { RouteRecordRaw } from 'vue-router';
 const routes: RouteRecordRaw[] = [
   {
     meta: {
+      authority: ['marketing'],
       icon: 'lucide:ticket',
       order: 30,
       title: '营销',
@@ -15,6 +16,7 @@ const routes: RouteRecordRaw[] = [
         path: 'activities',
         component: () => import('#/views/marketing/activities/index.vue'),
         meta: {
+          authority: ['marketing'],
           icon: 'lucide:badge-percent',
           title: '营销活动',
         },

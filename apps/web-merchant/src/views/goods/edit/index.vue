@@ -440,7 +440,6 @@ function applyAssistant(product: Record<string, any>) {
   if (product.productName)
     form.productName = String(product.productName).slice(0, 60);
   if (product.categoryId) form.categoryId = Number(product.categoryId);
-  if (product.spuNo) form.spuNo = String(product.spuNo);
   if (product.fakeSold !== undefined && product.fakeSold !== null)
     form.fakeSold = Number(product.fakeSold);
   if (typeof product.specImages === 'boolean')
@@ -559,10 +558,6 @@ function validateStep(index: number) {
       message.warning('请选择所属类目');
       return false;
     }
-    if (!form.spuNo.trim()) {
-      message.warning('请填写商品货号');
-      return false;
-    }
     return true;
   }
   if (index !== 1) return true;
@@ -610,7 +605,7 @@ async function startNewProduct() {
   form.productName = '';
   form.specImages = true;
   form.specs = [];
-  form.spuNo = `SP${String(Date.now()).slice(-6)}`;
+  form.spuNo = '';
   step.value = 0;
   reached.value = 0;
   salesStatus.value = '';
@@ -781,7 +776,12 @@ onBeforeUnmount(() => {
               </div>
               <label class="field">
                 <span>商品货号</span>
-                <Input v-model:value="form.spuNo" />
+                <Input
+                  :value="form.spuNo"
+                  disabled
+                  placeholder="保存后自动生成"
+                />
+                <p class="help">系统自动生成，全平台唯一，保存后不能修改。</p>
               </label>
               <label class="field span-2">
                 <span>基础已售</span>
