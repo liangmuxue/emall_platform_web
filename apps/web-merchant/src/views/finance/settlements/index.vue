@@ -114,7 +114,9 @@ onMounted(load);
           </Tag>
         </template>
         <template v-else-if="column.key === 'action'">
-          <Button size="small" type="link" @click="show(record)">查看</Button>
+          <Button size="small" type="link" @click="show(record as Bill)">
+查看
+</Button>
         </template>
       </template>
     </Table>

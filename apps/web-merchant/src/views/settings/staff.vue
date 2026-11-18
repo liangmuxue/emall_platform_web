@@ -106,7 +106,9 @@ onMounted(load);
           </Tag>
         </template>
         <template v-else-if="column.key === 'action'">
-          <Button size="small" type="link" @click="edit(record)"> 编辑 </Button>
+          <Button size="small" type="link" @click="edit(record as Staff)">
+            编辑
+          </Button>
         </template>
       </template>
     </Table>
