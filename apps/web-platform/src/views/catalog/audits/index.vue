@@ -196,7 +196,7 @@ async function loadSpecs(id: number) {
   }
 }
 
-function toggle(record: Product) {
+function toggle(record: Product | Record<string, any>) {
   if (isOpen(record.id)) {
     expanded.value = expanded.value.filter((id) => id !== record.id);
     return;
@@ -205,13 +205,13 @@ function toggle(record: Product) {
   void loadSpecs(record.id);
 }
 
-function statusTone(item: Product) {
+function statusTone(item: Product | Record<string, any>) {
   if (item.salesStatus === 'ON_SALE' && Number(item.stock) === 0)
     return 'default';
   return statusColor[item.salesStatus] || 'default';
 }
 
-function statusText(item: Product) {
+function statusText(item: Product | Record<string, any>) {
   if (item.salesStatus === 'ON_SALE' && Number(item.stock) === 0)
     return '已售罄';
   return item.statusName;
@@ -233,15 +233,16 @@ const sheetImages = computed(
   () => detail.value?.imageUrls?.filter(Boolean) || [],
 );
 
-function openAudit(record: Product) {
-  current.value = record;
+function openAudit(record: Product | Record<string, any>) {
+  const item = record as Product;
+  current.value = item;
   detail.value = null;
-  form.result = record.salesStatus === 'ON_SALE' ? 'OFF_SHELF' : 'ON_SALE';
+  form.result = item.salesStatus === 'ON_SALE' ? 'OFF_SHELF' : 'ON_SALE';
   form.remark = '';
   open.value = true;
   detailLoading.value = true;
   requestClient
-    .get<ProductDetail>(`/products/${record.id}`)
+    .get<ProductDetail>(`/products/${item.id}`)
     .then((product) => {
       detail.value = product;
     })
@@ -356,7 +357,7 @@ onMounted(load);
               <p v-else-if="!specs[record.id]" class="drawer-wait">
                 规格没有读取到
               </p>
-              <p v-else-if="!specs[record.id].length" class="drawer-wait">
+              <p v-else-if="!specs[record.id]?.length" class="drawer-wait">
                 还没有规格
               </p>
               <div v-else class="spec-list">

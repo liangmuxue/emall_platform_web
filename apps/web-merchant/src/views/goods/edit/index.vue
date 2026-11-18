@@ -159,7 +159,7 @@ function blankSpec(parentKey = '', unitName = '份'): Spec {
   };
 }
 
-function depthOf(spec: Spec) {
+function depthOf(spec: Record<string, any> | Spec) {
   let depth = 0;
   let parent = spec.parentKey;
   const seen = new Set<string>();
@@ -224,7 +224,7 @@ async function replaceAlbum(index: number, event: Event) {
   form.imageUrls[index] = await uploadFile(file);
 }
 
-async function uploadSpec(spec: Spec, event: Event) {
+async function uploadSpec(spec: Record<string, any> | Spec, event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = '';
@@ -232,7 +232,7 @@ async function uploadSpec(spec: Spec, event: Event) {
   spec.imageUrl = await uploadFile(file);
 }
 
-function addChild(parent: Spec) {
+function addChild(parent: Record<string, any> | Spec) {
   if (depthOf(parent) > 0) return;
   const child = blankSpec(parent.key, '份');
   if (hasChildren(parent.key)) {

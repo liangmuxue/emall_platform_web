@@ -12,13 +12,13 @@ import {
   FormItem,
   Input,
   InputNumber,
+  message,
   Modal,
   Popconfirm,
   Select,
   Space,
   Table,
   Tag,
-  message,
 } from 'ant-design-vue';
 
 import { requestClient } from '#/api/request';
@@ -103,7 +103,7 @@ function createRoot() {
   open.value = true;
 }
 
-function edit(record: Category) {
+function edit(record: Category | Record<string, any>) {
   Object.assign(form, {
     id: record.id,
     name: record.name,

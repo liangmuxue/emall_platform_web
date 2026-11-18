@@ -87,11 +87,11 @@ function submittable(status: string) {
   return status === 'DRAFT' || status === 'REJECTED' || status === 'OFF_SHELF';
 }
 
-function soldOut(item: Product) {
+function soldOut(item: Product | Record<string, any>) {
   return item.salesStatus === 'ON_SALE' && Number(item.stock) === 0;
 }
 
-function lowStock(item: Product) {
+function lowStock(item: Product | Record<string, any>) {
   const stock = Number(item.stock);
   return item.salesStatus === 'ON_SALE' && stock > 0 && stock < LOW_STOCK;
 }
@@ -179,7 +179,7 @@ async function loadSpecs(id: number) {
   }
 }
 
-function toggle(record: Product) {
+function toggle(record: Product | Record<string, any>) {
   if (isOpen(record.id)) {
     expanded.value = expanded.value.filter((id) => id !== record.id);
     return;
@@ -188,12 +188,12 @@ function toggle(record: Product) {
   void loadSpecs(record.id);
 }
 
-function statusText(item: Product) {
+function statusText(item: Product | Record<string, any>) {
   if (soldOut(item)) return '已售罄';
   return item.statusName;
 }
 
-function statusTone(item: Product) {
+function statusTone(item: Product | Record<string, any>) {
   if (soldOut(item)) return 'default';
   return statusColor[item.salesStatus] || 'default';
 }
@@ -303,7 +303,7 @@ onMounted(load);
               <p v-else-if="!specs[record.id]" class="drawer-wait">
                 规格没有读取到
               </p>
-              <p v-else-if="!specs[record.id].length" class="drawer-wait">
+              <p v-else-if="!specs[record.id]?.length" class="drawer-wait">
                 还没有规格
               </p>
               <div v-else class="spec-list">
