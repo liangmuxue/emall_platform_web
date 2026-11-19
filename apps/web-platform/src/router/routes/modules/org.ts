@@ -3,7 +3,7 @@ import type { RouteRecordRaw } from 'vue-router';
 const routes: RouteRecordRaw[] = [
   {
     meta: {
-      authority: ['org', 'accounts'],
+      authority: ['org', 'org-roles', 'org-staff', 'accounts'],
       icon: 'lucide:users',
       order: 5,
       title: '用户体系',
@@ -14,11 +14,30 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'PlatformOrg',
         path: '/org',
+        redirect: '/org/roles',
+        meta: {
+          hideInMenu: true,
+          title: '平台组织',
+        },
+      },
+      {
+        name: 'PlatformRoles',
+        path: '/org/roles',
         component: () => import('#/views/org/index.vue'),
         meta: {
-          authority: ['org'],
-          icon: 'lucide:network',
-          title: '平台组织',
+          authority: ['org', 'org-roles'],
+          icon: 'lucide:shield',
+          title: '岗位权限',
+        },
+      },
+      {
+        name: 'PlatformStaff',
+        path: '/org/staff',
+        component: () => import('#/views/org/index.vue'),
+        meta: {
+          authority: ['org', 'org-staff'],
+          icon: 'lucide:user-round',
+          title: '平台员工',
         },
       },
       {

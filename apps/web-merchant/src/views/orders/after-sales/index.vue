@@ -148,59 +148,116 @@ onMounted(load);
         </template>
         <template v-else-if="column.key === 'action'">
           <Button size="small" type="link" @click="show(record as CaseRow)">
-处理
-</Button>
+            处理
+          </Button>
         </template>
       </template>
     </Table>
 
-    <Modal
-      :footer="null"
-      :open="open"
-      title="售后详情"
-      width="640px"
-      @cancel="open = false"
-    >
-      <template v-if="detail">
-        <div class="hero">
+    <Modal :footer="null" :open="open" width="760px" @cancel="open = false">
+      <template #title>
+        <div class="dialog-title">
+          <span class="avatar">{{ (detail?.buyer || '售').slice(0, 1) }}</span>
           <div>
-            <div class="no">{{ detail.no }}</div>
-            <div class="muted">
-              {{ detail.typeName }} · 订单 {{ detail.orderNo }}
+            <div class="who-name">{{ detail?.no || '售后详情' }}</div>
+            <div class="who-sub">
+              {{ detail?.typeName || '正在读取' }}
+              <template v-if="detail"> · {{ detail.statusName }}</template>
             </div>
           </div>
-          <div class="money">¥{{ detail.amount }}</div>
         </div>
-        <div class="grid">
-          <span>顾客</span><b>{{ detail.buyer }} {{ detail.mobile }}</b>
-          <span>原因</span>
-          <b>{{ detail.reasonName
-            }}{{ detail.reasonText ? `，${detail.reasonText}` : '' }}</b>
-          <span>订单状态</span><b>{{ detail.orderStatusName }}</b>
-          <span v-if="detail.trackingNo">退货单号</span>
-          <b v-if="detail.trackingNo">{{ detail.trackingNo }}</b>
-          <span v-if="detail.reply">已回复</span>
-          <b v-if="detail.reply">{{ detail.reply }}</b>
+      </template>
+      <p v-if="!detail" class="muted">正在读取售后单…</p>
+      <template v-else>
+        <div class="amount">
+          <div>
+            <span>申请金额</span>
+            <b>¥{{ detail.amount }}</b>
+          </div>
+          <Tag :color="color[detail.status] || 'default'">
+            {{ detail.statusName }}
+          </Tag>
         </div>
-        <div class="lines">
-          <div v-for="(item, index) in detail.items || []" :key="index">
-            <span>{{ item.name }} {{ item.spec }} × {{ item.quantity }}</span>
-            <b>¥{{ item.amount }}</b>
+
+        <div class="facts">
+          <div>
+            <span>顾客</span>
+            <b>{{ detail.buyer }}</b>
+            <small>{{ detail.mobile || '未留手机号' }}</small>
+          </div>
+          <div>
+            <span>订单</span>
+            <b>{{ detail.orderNo }}</b>
+            <small>{{ detail.orderStatusName || '订单状态未知' }}</small>
+          </div>
+          <div>
+            <span>申请时间</span>
+            <b>{{ detail.createdAt || '—' }}</b>
+            <small>{{ detail.typeName }}</small>
+          </div>
+          <div>
+            <span>退货物流</span>
+            <b>{{ detail.trackingNo || '暂无单号' }}</b>
+            <small>顾客寄回后填写</small>
           </div>
         </div>
-        <template
+
+        <section class="block">
+          <div class="block-title">申请商品</div>
+          <p v-if="!detail.items?.length" class="muted">没有商品明细</p>
+          <div v-else class="lines">
+            <div v-for="(item, index) in detail.items" :key="index">
+              <div>
+                <b>{{ item.name }}</b>
+                <small>{{ item.spec || '默认规格' }} × {{ item.quantity }}</small>
+              </div>
+              <b>¥{{ item.amount }}</b>
+            </div>
+          </div>
+        </section>
+
+        <section class="block">
+          <div class="block-title">申请说明</div>
+          <div class="notes">
+            <div>
+              <span>申请原因</span>
+              <p>
+                {{ detail.reasonName
+                }}{{ detail.reasonText ? `，${detail.reasonText}` : '' }}
+              </p>
+            </div>
+            <div>
+              <span>已回复</span>
+              <p>{{ detail.reply || '还没有回复顾客' }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section
           v-if="
             detail.status === 'PENDING_MERCHANT' ||
             detail.status === 'WAIT_RETURN'
           "
+          class="block decide"
         >
+          <div class="block-title">处理这单</div>
+          <p
+            v-if="detail.status === 'WAIT_RETURN' && !detail.trackingNo"
+            class="hint"
+          >
+            顾客还没填写退货单号，暂时不能确认收货。
+          </p>
           <Input.TextArea
             v-model:value="reply"
             :maxlength="200"
             :rows="3"
-            placeholder="回复顾客，拒绝时必填"
+            placeholder="写给顾客的回复。拒绝时必须填写原因"
+            show-count
           />
           <div class="actions">
+            <Button danger :loading="acting" @click="act('reject')">
+              拒绝
+            </Button>
             <Button
               v-if="
                 detail.status === 'PENDING_MERCHANT' &&
@@ -232,17 +289,8 @@ onMounted(load);
             >
               确认收货并退款
             </Button>
-            <Button danger :loading="acting" @click="act('reject')">
-              拒绝
-            </Button>
           </div>
-          <p
-            v-if="detail.status === 'WAIT_RETURN' && !detail.trackingNo"
-            class="muted"
-          >
-            顾客还没填写退货单号，暂时不能确认收货。
-          </p>
-        </template>
+        </section>
       </template>
     </Modal>
   </Page>
@@ -276,47 +324,157 @@ onMounted(load);
   color: #8c8c8c;
 }
 
-.hero {
+.dialog-title {
   display: flex;
+  gap: 12px;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
 }
 
-.no {
-  font-size: 16px;
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-weight: 650;
+  color: #1677ff;
+  background: color-mix(in srgb, #1677ff 16%, transparent);
+  border-radius: 10px;
+}
+
+.who-name {
   font-weight: 650;
 }
 
-.money {
-  font-size: 28px;
-  font-weight: 700;
-  color: #cf1322;
+.who-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #8c8c8c;
 }
 
-.grid {
+.amount {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  background: linear-gradient(
+    145deg,
+    hsl(var(--warning) / 24%),
+    hsl(var(--card)) 62%
+  );
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+}
+
+.amount span {
+  display: block;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.amount b {
+  display: block;
+  margin-top: 2px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #cf1322;
+  letter-spacing: -0.03em;
+}
+
+.facts {
   display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 8px 12px;
-  margin-bottom: 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.facts > div {
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, currentcolor 12%, transparent);
+  border-radius: 12px;
+}
+
+.facts span,
+.notes span,
+.block-title {
+  display: block;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.facts b,
+.lines b {
+  display: block;
+  margin-top: 4px;
+  font-weight: 650;
+}
+
+.facts small,
+.lines small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.block {
+  margin-bottom: 14px;
+}
+
+.block-title {
+  margin-bottom: 8px;
+  font-weight: 650;
+  color: inherit;
 }
 
 .lines {
-  padding: 4px 0;
-  margin-bottom: 16px;
-  border-top: 1px solid color-mix(in srgb, currentcolor 16%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, currentcolor 16%, transparent);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentcolor 12%, transparent);
+  border-radius: 12px;
 }
 
-.lines div {
+.lines > div {
   display: flex;
+  gap: 12px;
+  align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: 12px 14px;
+}
+
+.lines > div + div {
+  border-top: 1px solid color-mix(in srgb, currentcolor 10%, transparent);
+}
+
+.notes {
+  display: grid;
+  gap: 10px;
+}
+
+.notes > div {
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, currentcolor 12%, transparent);
+  border-radius: 12px;
+}
+
+.notes p {
+  margin: 6px 0 0;
+  line-height: 1.6;
+}
+
+.hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #d48806;
 }
 
 .actions {
   display: flex;
   gap: 8px;
+  justify-content: flex-end;
   margin-top: 12px;
 }
 </style>

@@ -148,61 +148,120 @@ onMounted(load);
         </template>
         <template v-else-if="column.key === 'action'">
           <Button size="small" type="link" @click="show(record as CaseRow)">
-查看
-</Button>
+            查看
+          </Button>
         </template>
       </template>
     </Table>
 
-    <Modal
-      :footer="null"
-      :open="open"
-      title="仲裁"
-      width="640px"
-      @cancel="open = false"
-    >
-      <template v-if="detail">
-        <div class="hero">
+    <Modal :footer="null" :open="open" width="760px" @cancel="open = false">
+      <template #title>
+        <div class="dialog-title">
+          <span class="avatar">{{
+            (detail?.shopName || '售').slice(0, 1)
+          }}</span>
           <div>
-            <div class="no">{{ detail.no }}</div>
-            <div class="muted">
-              {{ detail.shopName }} · {{ detail.typeName }} ·
-              {{ detail.orderNo }}
+            <div class="who-name">{{ detail?.no || '售后详情' }}</div>
+            <div class="who-sub">
+              {{ detail?.typeName || '正在读取' }}
+              <template v-if="detail"> · {{ detail.statusName }}</template>
             </div>
           </div>
-          <div class="money">¥{{ detail.amount }}</div>
         </div>
-        <div class="grid">
-          <span>顾客</span><b>{{ detail.buyer }} {{ detail.mobile }}</b>
-          <span>申请原因</span>
-          <b>{{ detail.reasonName
-            }}{{ detail.reasonText ? `，${detail.reasonText}` : '' }}</b>
-          <span>商家回复</span><b>{{ detail.reply || '无' }}</b>
-          <span>仲裁理由</span><b>{{ detail.arbitrationReason || '无' }}</b>
-          <span v-if="detail.arbitrationResult">仲裁结果</span>
-          <b v-if="detail.arbitrationResult">{{ detail.arbitrationResult }}</b>
+      </template>
+      <p v-if="!detail" class="muted">正在读取售后单…</p>
+      <template v-else>
+        <div class="amount">
+          <div>
+            <span>申请金额</span>
+            <b>¥{{ detail.amount }}</b>
+          </div>
+          <Tag :color="color[detail.status] || 'default'">
+            {{ detail.statusName }}
+          </Tag>
         </div>
-        <div class="lines">
-          <div v-for="(item, index) in detail.items || []" :key="index">
-            <span>{{ item.name }} {{ item.spec }} × {{ item.quantity }}</span>
-            <b>¥{{ item.amount }}</b>
+
+        <div class="facts">
+          <div>
+            <span>顾客</span>
+            <b>{{ detail.buyer }}</b>
+            <small>{{ detail.mobile || '未留手机号' }}</small>
+          </div>
+          <div>
+            <span>店铺</span>
+            <b>{{ detail.shopName }}</b>
+            <small>{{ detail.orderNo }}</small>
+          </div>
+          <div>
+            <span>申请时间</span>
+            <b>{{ detail.createdAt || '—' }}</b>
+            <small>{{ detail.typeName }}</small>
+          </div>
+          <div>
+            <span>退货物流</span>
+            <b>{{ detail.trackingNo || '暂无单号' }}</b>
+            <small>顾客寄回后填写</small>
           </div>
         </div>
-        <template v-if="detail.status === 'ARBITRATING'">
+
+        <section class="block">
+          <div class="block-title">申请商品</div>
+          <p v-if="!detail.items?.length" class="muted">没有商品明细</p>
+          <div v-else class="lines">
+            <div v-for="(item, index) in detail.items" :key="index">
+              <div>
+                <b>{{ item.name }}</b>
+                <small>{{ item.spec || '默认规格' }} × {{ item.quantity }}</small>
+              </div>
+              <b>¥{{ item.amount }}</b>
+            </div>
+          </div>
+        </section>
+
+        <section class="block">
+          <div class="block-title">双方说明</div>
+          <div class="notes">
+            <div>
+              <span>申请原因</span>
+              <p>
+                {{ detail.reasonName
+                }}{{ detail.reasonText ? `，${detail.reasonText}` : '' }}
+              </p>
+            </div>
+            <div>
+              <span>商家回复</span>
+              <p>{{ detail.reply || '商家还没有回复' }}</p>
+            </div>
+            <div>
+              <span>申请仲裁理由</span>
+              <p>{{ detail.arbitrationReason || '未填写' }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="detail.arbitrationResult" class="block result">
+          <div class="block-title">仲裁结果</div>
+          <p>{{ detail.arbitrationResult }}</p>
+        </section>
+
+        <section v-if="detail.status === 'ARBITRATING'" class="block decide">
+          <div class="block-title">仲裁决定</div>
           <div class="choices">
             <button
               :class="{ on: support === 'BUYER' }"
               type="button"
               @click="support = 'BUYER'"
             >
-              支持顾客，按申请金额退款
+              <b>支持顾客</b>
+              <small>按申请金额退款</small>
             </button>
             <button
-              :class="{ on: support === 'MERCHANT' }"
+              :class="{ danger: support === 'MERCHANT' }"
               type="button"
               @click="support = 'MERCHANT'"
             >
-              支持商家，关闭这单售后
+              <b>支持商家</b>
+              <small>关闭这单售后</small>
             </button>
           </div>
           <Input.TextArea
@@ -210,6 +269,7 @@ onMounted(load);
             :maxlength="200"
             :rows="3"
             placeholder="写下仲裁说明，顾客和商家都能看到"
+            show-count
           />
           <div class="actions">
             <Button
@@ -221,7 +281,7 @@ onMounted(load);
               {{ support === 'BUYER' ? '确认退款' : '确认关闭' }}
             </Button>
           </div>
-        </template>
+        </section>
       </template>
     </Modal>
   </Page>
@@ -234,8 +294,7 @@ onMounted(load);
   margin-bottom: 16px;
 }
 
-.toolbar button,
-.choices button {
+.toolbar button {
   height: 32px;
   padding: 0 14px;
   color: inherit;
@@ -245,8 +304,7 @@ onMounted(load);
   border-radius: 999px;
 }
 
-.toolbar button.on,
-.choices button.on {
+.toolbar button.on {
   color: #1677ff;
   background: color-mix(in srgb, #1677ff 16%, transparent);
   border-color: #1677ff;
@@ -257,57 +315,200 @@ onMounted(load);
   color: #8c8c8c;
 }
 
-.hero {
+.dialog-title {
   display: flex;
+  gap: 12px;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
 }
 
-.no {
-  font-size: 16px;
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-weight: 650;
+  color: #1677ff;
+  background: color-mix(in srgb, #1677ff 16%, transparent);
+  border-radius: 10px;
+}
+
+.who-name {
   font-weight: 650;
 }
 
-.money {
-  font-size: 28px;
-  font-weight: 700;
-  color: #cf1322;
+.who-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #8c8c8c;
 }
 
-.grid {
+.amount {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  background: linear-gradient(
+    145deg,
+    hsl(var(--warning) / 24%),
+    hsl(var(--card)) 62%
+  );
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+}
+
+.amount span {
+  display: block;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.amount b {
+  display: block;
+  margin-top: 2px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #cf1322;
+  letter-spacing: -0.03em;
+}
+
+.facts {
   display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 8px 12px;
-  margin-bottom: 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.facts > div {
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, currentcolor 12%, transparent);
+  border-radius: 12px;
+}
+
+.facts span,
+.notes span,
+.block-title {
+  display: block;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.facts b,
+.lines b {
+  display: block;
+  margin-top: 4px;
+  font-weight: 650;
+}
+
+.facts small,
+.lines small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.block {
+  margin-bottom: 14px;
+}
+
+.block-title {
+  margin-bottom: 8px;
+  font-weight: 650;
+  color: inherit;
 }
 
 .lines {
-  padding: 4px 0;
-  margin-bottom: 16px;
-  border-top: 1px solid color-mix(in srgb, currentcolor 16%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, currentcolor 16%, transparent);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentcolor 12%, transparent);
+  border-radius: 12px;
 }
 
-.lines div {
+.lines > div {
   display: flex;
+  gap: 12px;
+  align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: 12px 14px;
+}
+
+.lines > div + div {
+  border-top: 1px solid color-mix(in srgb, currentcolor 10%, transparent);
+}
+
+.notes {
+  display: grid;
+  gap: 10px;
+}
+
+.notes > div {
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, currentcolor 12%, transparent);
+  border-radius: 12px;
+}
+
+.notes p,
+.result p {
+  margin: 6px 0 0;
+  line-height: 1.6;
+}
+
+.result {
+  padding: 12px 14px;
+  background: color-mix(in srgb, #1677ff 8%, transparent);
+  border: 1px solid color-mix(in srgb, #1677ff 28%, transparent);
+  border-radius: 12px;
+}
+
+.decide {
+  padding-top: 4px;
 }
 
 .choices {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   margin-bottom: 12px;
 }
 
 .choices button {
-  height: auto;
-  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentcolor 14%, transparent);
   border-radius: 12px;
 }
 
+.choices button small {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.choices button.on {
+  color: #1677ff;
+  background: color-mix(in srgb, #1677ff 10%, transparent);
+  border-color: #1677ff;
+}
+
+.choices button.danger {
+  color: #ff4d4f;
+  background: color-mix(in srgb, #ff4d4f 10%, transparent);
+  border-color: #ff4d4f;
+}
+
 .actions {
+  display: flex;
+  justify-content: flex-end;
   margin-top: 12px;
 }
 </style>
