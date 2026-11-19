@@ -21,6 +21,7 @@ import {
 import { requestClient } from '#/api/request';
 
 type Menu = { children?: Menu[]; id: string; label: string };
+type MenuNode = { children?: MenuNode[]; key: string; title: string };
 type Role = {
   dataScope: string;
   id: number;
@@ -129,7 +130,7 @@ function leaves(nodes: Menu[]): Menu[] {
   );
 }
 
-function toTree(nodes: Menu[]) {
+function toTree(nodes: Menu[]): MenuNode[] {
   return nodes.map((node) => ({
     children: node.children?.length ? toTree(node.children) : undefined,
     key: node.id,
